@@ -1490,6 +1490,7 @@ bool p3PeerMgrIMPL::addCandidateForOwnExternalAddress(const RsPeerId &from, cons
             
 	    mReportedOwnAddresses[from] = addr_filtered ;
 
+        // Iterate over all own addresses reported from friends and remove those that are currently not online
 	    for(std::map<RsPeerId,sockaddr_storage>::iterator it(mReportedOwnAddresses.begin());it!=mReportedOwnAddresses.end();)
 		    if(!mLinkMgr->isOnline(it->first))
 		    {
@@ -1528,7 +1529,9 @@ bool p3PeerMgrIMPL::addCandidateForOwnExternalAddress(const RsPeerId &from, cons
 
     if((!rsBanList->isAddressAccepted(addr_filtered,RSBANLIST_CHECKING_FLAGS_WHITELIST)) && (!sockaddr_storage_sameip(own_addr,addr_filtered)))
     {
-        std::cerr << "  Peer " << from << " reports a connexion address (" << sockaddr_storage_iptostring(addr_filtered) <<") that is not your current external address (" << sockaddr_storage_iptostring(own_addr) << "). This is weird." << std::endl;
+        std::cerr << "  Peer " << from << " reports a connection address (" << sockaddr_storage_iptostring(addr_filtered) <<") that is not your current external address (" << sockaddr_storage_iptostring(own_addr) << "). This is weird." << std::endl;
+
+        // TODO: Here should be the check if our own address has changed. So far, the best guess from peers is not used.
 
         RsServer::notify()->AddFeedItem(RS_FEED_ITEM_SEC_IP_WRONG_EXTERNAL_IP_REPORTED, from.toStdString(), sockaddr_storage_iptostring(own_addr), sockaddr_storage_iptostring(addr));
     }
@@ -1538,10 +1541,17 @@ bool p3PeerMgrIMPL::addCandidateForOwnExternalAddress(const RsPeerId &from, cons
     return true ;
 }
 
+//! Computes the current best guess for the own IP address based on the addresses reported by other peers
+/*!
+    \param addr     best guess of own address.
+    \param count    count of peers that reported best guess.
+    \return true (always)
+*/
 bool p3PeerMgrIMPL::locked_computeCurrentBestOwnExtAddressCandidate(sockaddr_storage& addr, uint32_t& count)
 {
     std::map<sockaddr_storage,ZeroedInt> addr_counts ;
     
+    // calculate the count of each address reported by connected peers
     for(std::map<RsPeerId,sockaddr_storage>::iterator it(mReportedOwnAddresses.begin());it!=mReportedOwnAddresses.end();++it)
 	    ++addr_counts[it->second].n ;
 
@@ -1549,8 +1559,8 @@ bool p3PeerMgrIMPL::locked_computeCurrentBestOwnExtAddressCandidate(sockaddr_sto
     std::cerr << "Current ext addr statistics:" << std::endl;
 #endif
     
+    // find address with maximum count and store it in referenced parameters
     count = 0 ;
-    
     for(std::map<sockaddr_storage,ZeroedInt>::const_iterator it(addr_counts.begin());it!=addr_counts.end();++it)
     {
         if(uint32_t(it->second.n) > count)
