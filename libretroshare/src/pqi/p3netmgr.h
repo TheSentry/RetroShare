@@ -293,7 +293,9 @@ void 	netStunInit();
 void	netInit();
 
 void 	netExtInit();
+public:     // temporary for testing
 void 	netExtCheck();
+protected:  // remove afterwards if it works
 
 void 	netUpnpInit();
 void 	netUpnpCheck();

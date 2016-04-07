@@ -1529,9 +1529,27 @@ bool p3PeerMgrIMPL::addCandidateForOwnExternalAddress(const RsPeerId &from, cons
 
     if((!rsBanList->isAddressAccepted(addr_filtered,RSBANLIST_CHECKING_FLAGS_WHITELIST)) && (!sockaddr_storage_sameip(own_addr,addr_filtered)))
     {
-        std::cerr << "  Peer " << from << " reports a connection address (" << sockaddr_storage_iptostring(addr_filtered) <<") that is not your current external address (" << sockaddr_storage_iptostring(own_addr) << "). This is weird." << std::endl;
+        std::cerr << "  Peer " << from << " reports a connection address (" << sockaddr_storage_iptostring(addr_filtered) <<") that is not your current external address (" << sockaddr_storage_iptostring(own_addr) << ")" << std::endl;
+        std::cerr << "  The external IP address might have changed, check and update it ..." << std::endl;
+        mNetMgr->netExtCheck();
+    }
 
-        // TODO: Here should be the check if our own address has changed. So far, the best guess from peers is not used.
+    
+    // second try, get hopefully updated external address and repeat
+    if(!mNetMgr->getExtAddress(own_addr))
+    {
+#ifdef PEER_DEBUG
+        std::cerr << "  cannot get current external address. Returning false" << std::endl;
+#endif
+        return false ;
+    }
+#ifdef PEER_DEBUG
+    std::cerr << "  current external address is known to be " << sockaddr_storage_iptostring(own_addr) << std::endl;
+#endif
+    
+    if((!rsBanList->isAddressAccepted(addr_filtered,RSBANLIST_CHECKING_FLAGS_WHITELIST)) && (!sockaddr_storage_sameip(own_addr,addr_filtered)))
+    {
+        std::cerr << "  Peer " << from << " still reports a connection address (" << sockaddr_storage_iptostring(addr_filtered) <<") that is not your current external address (" << sockaddr_storage_iptostring(own_addr) << "). This is weird." << std::endl;
 
         RsServer::notify()->AddFeedItem(RS_FEED_ITEM_SEC_IP_WRONG_EXTERNAL_IP_REPORTED, from.toStdString(), sockaddr_storage_iptostring(own_addr), sockaddr_storage_iptostring(addr));
     }

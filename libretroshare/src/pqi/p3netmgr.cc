@@ -702,7 +702,13 @@ void p3NetMgrIMPL::netExtCheck()
 		std::map<sockaddr_storage,ZeroInt> address_votes ;
 
 		/* check for External Address */
-		/* in order of importance */
+		/* in order of importance
+			(1) UPnP -> which handles itself
+			(2) DhtStunner (disabled, unless ALLOW_DHT_STUNNER is defined)
+			(3) ExtAddrFinder (if enabled)
+			(4) PeerManager (if enabled) -> the address reported from connected friends
+		*/
+		
 		/* (1) UPnP -> which handles itself */
 		{
 #if defined(NETMGR_DEBUG_TICK) || defined(NETMGR_DEBUG_RESET)
@@ -746,7 +752,7 @@ void p3NetMgrIMPL::netExtCheck()
         // (cyril) I disabled this because it's pretty dangerous. The DHT can report a wrong address quite easily
         // if the other DHT peers are not collaborating.
         
-		/* Next ask the DhtStunner */
+		/* (2) Next ask the DhtStunner */
 		{
 #if defined(NETMGR_DEBUG_TICK) || defined(NETMGR_DEBUG_RESET)
 			std::cerr << "p3NetMgrIMPL::netExtCheck() Ext Not Ok, Checking DhtStunner" << std::endl;
@@ -783,7 +789,7 @@ void p3NetMgrIMPL::netExtCheck()
 		}
 #endif
 
-		/* otherwise ask ExtAddrFinder */
+		/* (3) otherwise ask ExtAddrFinder */
 		{
 			/* ExtAddrFinder */
 			if (mUseExtAddrFinder)
@@ -797,7 +803,7 @@ void p3NetMgrIMPL::netExtCheck()
 #if defined(NETMGR_DEBUG_TICK) || defined(NETMGR_DEBUG_RESET)
 					std::cerr << "p3NetMgrIMPL::netExtCheck() Ext supplied by ExtAddrFinder" << std::endl;
 #endif
-					/* best guess at port */
+					/* best guess at port (same as for the local address)*/
 					sockaddr_storage_setport(tmpip, sockaddr_storage_port(mLocalAddr));
 
 #if defined(NETMGR_DEBUG_TICK) || defined(NETMGR_DEBUG_RESET)
@@ -821,7 +827,7 @@ void p3NetMgrIMPL::netExtCheck()
 			}
 		}
         
-        	/* also ask peer mgr. */
+        	/* (4) also ask peer mgr. */
 		
 		if (mPeerMgr)
 		{
